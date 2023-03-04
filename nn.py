@@ -49,8 +49,8 @@ batch_size = 100
 dataset = ClassificationFaceDataset(transform=toTensor())
 dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
-model = model.NeuralNet(dataset.dataX.shape[1],1000, 2,device)
-# model = model.CustomMobileNet(dataset.dataX.shape[1], 2)
+# model = model.NeuralNet(dataset.dataX.shape[1],1000, 2,device)
+model = model.CustomMobileNet(dataset.dataX.shape[1], 2)
 if os.path.isfile(save_path):
     model.load_state_dict(torch.load(save_path))
 # model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
