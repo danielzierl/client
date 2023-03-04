@@ -21,26 +21,24 @@ data_file = "./data/data.csv"
 
 def load_data(file, train_rate=0.8):
     data = np.loadtxt(file, delimiter=",", dtype=float)
+    indexes = range(len(data)-1)
 
-    data_train, data_val = train_test_split(data, train_size=0.8, random_state=43, shuffle=True)
+    y = torch.from_numpy(data[:, -1])
+    data = data[:, :-1]
 
-    X_train, y_train = data_train[:, :-1], data_train[:, -1]
-    X_test, y_test = data_val[:, :-1], data_val[:, -1]
-    y_train = torch.from_numpy(y_train)
-    y_test = torch.from_numpy(y_test)
+    y = nn.functional.one_hot(y.to(torch.int64))
 
-    # y_train = torch.reshape(y_train, (-1, 1))
-    # y_test = torch.reshape(y_test, (-1, 1))
+    train_idx, test_idx = train_test_split(indexes, train_size=train_rate, random_state=43, shuffle=True)
 
-    y_train = nn.functional.one_hot(y_train.to(torch.int64))
-    y_test = nn.functional.one_hot(y_test.to(torch.int64))
+    X_train, X_test = data[train_idx], data[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
 
     return X_train, X_test, y_train, y_test
 
 torch_model = CustomMobileNet(1404, 2).to(device)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
 
     class CustomDataset(Dataset):
         def __init__(self, X, y):
@@ -66,13 +64,12 @@ if __name__ == "__main__":
 
     batch_size = 20
 
-    
 
     # Hyperparameters
     learning_rate = 0.002
     epochs = 20
 
-    X_train, X_val, y_train, y_val = load_data(data_file, 2)
+    X_train, X_val, y_train, y_val = load_data(data_file, 0.2)
     train_dataset = CustomDataset(X_train, y_train)
     val_dataset = CustomDataset(X_val, y_val)
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
