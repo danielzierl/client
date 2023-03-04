@@ -25,6 +25,7 @@ class FaceMeshWidget(QWidget):
         self.classify_on_the_fly= classify_on_the_fly
         self.classification_label = classificationLabel
         self.label =0
+        self.i=0
         # Setup layout
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -81,9 +82,12 @@ class FaceMeshWidget(QWidget):
 
                     cv2.circle(frame, (self.x, self.y), 1, (0, 255, 0), -1)
         if len(self.xarr)>0:
-            self.array.append([self.xarr, self.yarr, self.zarr])
+            if len(self.array) == 5:
+                self.mean_data.append(self.meanData())
+                self.array = []
             self.xarr.extend(self.yarr)
             self.xarr.extend(self.zarr)
+            self.array.extend(self.xarr)
             mean = 0
             for el in self.xarr:
                 mean+=el
@@ -95,9 +99,6 @@ class FaceMeshWidget(QWidget):
             for i,el in enumerate(self.xarr):
                 self.xarr[i]= (el-mean)/std
 
-        # if len(self.array) == 5:
-        #     self.mean_data.append(self.meanData())
-        #     self.array = []
 
 
         # Display video frame
@@ -107,12 +108,13 @@ class FaceMeshWidget(QWidget):
                 torch_model.to(device)
                 torch_model.load_state_dict(torch.load(save_path))
                 self.programBeClassifiin(torch_model)
+                self.i +=1
             if self.saveToJson:
                 self.programBeSavin("data/data")
 
     # def meanData(self):
-    #     x_sum, y_sum, z_sum = np.zeros(468), np.zeros(468),np.zeros(468)
-    #     for vector in self.array:
+    #     sum = np.zeros(1404)
+    #     self.array.view(-1,1404)
     #         vector = np.array(vector)
     #         x_sum = x_sum + (vector[0])
     #         y_sum = y_sum + (vector[1])
@@ -126,12 +128,14 @@ class FaceMeshWidget(QWidget):
         event.accept()
 
     def programBeClassifiin(self,torch_model):
-        
-        pre = torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32).to(device)
-        
-        out = torch_model(pre)
-        _,predicted =torch.max((out), dim=1)
-        self.classification_label.setText("no emotion" if  predicted == 0 else "emotion")
+        pre =torch.tensor([])
+        pre =torch.cat((pre, torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32).to(device)))
+        if self.i>3:
+            self.i=0
+            out = torch_model(pre)
+            _,predicted =torch.max((torch.mean(out)), dim=0)
+            print(out)
+            self.classification_label.setText("no emotion" if  predicted == 0 else "emotion")
 
 
     def programBeSavin(self,arg):

@@ -69,7 +69,7 @@ if __name__ == "__main__":
     
 
     # Hyperparameters
-    learning_rate = 0.002
+    learning_rate = 0.0001
     epochs = 20
 
     X_train, X_val, y_train, y_val = load_data(data_file, 2)
@@ -121,8 +121,8 @@ if __name__ == "__main__":
             print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
         return correct
 
-    if os.path.isfile(save_path):
-            torch_model.load_state_dict(torch.load(save_path))
+    # if os.path.isfile(save_path):
+    #         torch_model.load_state_dict(torch.load(save_path))
     for t in range(epochs):
         
         # if t == 50:
