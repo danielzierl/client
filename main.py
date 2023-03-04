@@ -145,7 +145,6 @@ class FaceMeshWidget(QWidget):
                 writer = csv.writer(f)
                 writer.writerow(self.xarr)
             
-    
 
 
 class MainWindow(QMainWindow):
