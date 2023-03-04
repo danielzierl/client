@@ -7,6 +7,7 @@ import model
 import torch.nn as nn
 import copy
 
+
 class ClassificationFaceDataset(Dataset):
     test_percentage = 0.75
 
@@ -17,8 +18,10 @@ class ClassificationFaceDataset(Dataset):
         np.random.shuffle(self.dataX)
         data_count = self.dataX.shape[0]
         train_data_count = round(data_count * self.test_percentage)
+        test_data_count = self.total_count-train_data_count
         self.labels = copy.deepcopy(self.dataX[:train_data_count,-1])
         self.testY = self.dataX[train_data_count:,-1]
+
         self.testX = self.dataX[train_data_count:,:-1]
         self.dataX = copy.deepcopy(self.dataX[:train_data_count,:-1])
     
@@ -55,11 +58,12 @@ class toTensor():
 device = torch.device('cpu')
 lr= 0.002
 num_of_epochs = 500
-batch_size = 200
+batch_size = 1
 dataset = ClassificationFaceDataset(transform=toTensor())
 dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
-# model = model.NeuralNet(input_size=dataset.dataX.shape[1], hidden_size=1000, num_of_classes=2, device=device, training=False)
+model = model.CustomMobileNet(dataset.dataX.shape[1], 2)
+
 # model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
 model.eval()
 print(dataset.dataX.shape[1])

@@ -17,3 +17,23 @@ class NeuralNet(torch.nn.Module):
         out = nn.functional.dropout( nn.functional.relu(self.l2(out)), p=0.5)
         out = self.l3(out)
         return out
+
+class CustomMobileNet(torch.nn.Module):
+    def __init__(self, input_size, output_size) -> None:
+        super(CustomMobileNet, self).__init__()
+        self.input_size = input_size
+        self.top = nn.Linear(in_features=input_size, out_features=224*224*3)
+        self.mid = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=True)
+        for param in self.mid.parameters():
+            param.requires_grad = False
+        self.bottom = nn.Linear(1000, output_size)
+
+    def forward(self,x):
+        out = x.view(-1,self.input_size)
+        out = self.top(out)
+        out = out.view(-1,3,224,224)
+        out = self.mid(out)
+        out = self.bottom(out)
+        return out
+
+
