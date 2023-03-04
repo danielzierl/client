@@ -28,6 +28,7 @@ class MobNet(torch.nn.Module):
 class CustomMobileNet(torch.nn.Module):
     def __init__(self, input_size, output_size) -> None:
         super(CustomMobileNet, self).__init__()
+        self.flatten = nn.Flatten()
         self.input_size = input_size
         self.top = nn.Linear(in_features=input_size, out_features=224*224*3)
         self.mid = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=True)
@@ -36,11 +37,11 @@ class CustomMobileNet(torch.nn.Module):
         self.bottom = nn.Linear(1000, output_size)
 
     def forward(self,x):
-        out = x.view(-1,self.input_size)
+        out = self.flatten(x)
         out = self.top(out)
         out = out.view(-1,3,224,224)
         out = self.mid(out)
         out = self.bottom(out)
-        return out
+        return torch.max(out, dim=0)
 
 
