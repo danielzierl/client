@@ -9,11 +9,14 @@ import json
 import os
 import csv
 
+import torch
 
 class FaceMeshWidget(QWidget):
-    def __init__(self, saveToJson=False):
+    def __init__(self, saveToJson=False, classify_on_the_fly=False, classificationLabel=None):
         super().__init__()
         self.saveToJson = saveToJson
+        self.classify_on_the_fly= classify_on_the_fly
+        self.classification_label = classificationLabel
         self.label =0
         # Setup layout
         layout = QHBoxLayout()
@@ -62,29 +65,42 @@ class FaceMeshWidget(QWidget):
                     self.yarr.append(self.y)
                     self.zarr.append(self.z)
                     cv2.circle(frame, (self.x, self.y), 1, (0, 255, 0), -1)
-
-        # Display video frame
-        self.video_widget.setImage(np.rot90(frame, 1))
-        if self.saveToJson:
-            self.programBeSavin("data/data")
+        if len(self.xarr)>0:
+            self.xarr.extend(self.yarr)
+            self.xarr.extend(self.zarr)
+            mean = 0
+            for el in self.xarr:
+                mean+=el
+            mean = mean/len(self.xarr)
+            std=0
+            for el in self.xarr:
+                std += (el-mean)**2
+            std = (std/len(self.xarr))**0.5
+            for i,el in enumerate(self.xarr):
+                self.xarr[i]= (el-mean)/std
+            print(self.xarr)
+            # Display video frame
+            self.video_widget.setImage(np.rot90(frame, 1))
+            if self.classify_on_the_fly:
+                self.programBeClassifiin()
+            if self.saveToJson:
+                self.programBeSavin("data/data")
 
     def closeEvent(self, event):
         self.capture.release()
         event.accept()
 
+    def programBeClassifiin(self):
+        from nn import save_path,model
+        model.load_state_dict(torch.load(save_path))
+        pre = self.xarr
+        out = model(pre)
+        _,predicted =torch.max((out), dim=1)
+        self.classification_label.setText("no emotion" if  predicted ==0 else "emotion")
+
+
     def programBeSavin(self,arg):
-        self.xarr.extend(self.yarr)
-        self.xarr.extend(self.zarr)
-        mean = 0
-        for el in self.xarr:
-            mean+=el
-        mean = mean/len(self.xarr)
-        std=0
-        for el in self.xarr:
-            std += (el-mean)**2
-        std = (std/len(self.xarr))**0.5
-        for i,el in enumerate(self.xarr):
-            self.xarr[i]= (el-mean)/std
+        
         self.xarr.append(self.label)
         with open(f"{arg}.csv", 'a') as f:
             if self.xarr:
@@ -130,7 +146,8 @@ class MainWindow(QMainWindow):
         self.calibration_window.show()
 
     def run(self):
-        print("Running...")
+        self.run_window = RunClassifiationWindow()
+        self.run_window.show()
 
 class CalibrationWindow(QWidget):
     def __init__(self):
@@ -163,6 +180,25 @@ class CalibrationWindow(QWidget):
         }
         with open(f"{expression}.json", "w") as f:
             json.dump(data, f)
+
+class RunClassifiationWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.measuring = False
+        self.emotion = False
+        self.setGeometry(200, 200, 600, 400)
+        layout = QVBoxLayout()
+        self.labelino = QLabel("no emotion")
+        self.facemesh_widget = FaceMeshWidget(classificationLabel=self.labelino, classify_on_the_fly=True)
+
+
+        
+        layout.addWidget(self.labelino)
+        layout.addWidget(self.facemesh_widget)
+        
+        self.setLayout(layout)
+    
+
 
 class ContinuousMeasuring(QWidget):
     def __init__(self):
