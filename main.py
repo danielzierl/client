@@ -104,10 +104,10 @@ class FaceMeshWidget(QWidget):
         # Display video frame
             self.video_widget.setImage(np.rot90(frame, 1))
             if self.classify_on_the_fly:
-                from nnm import torch_model,save_path
-                torch_model.to(device)
-                torch_model.load_state_dict(torch.load(save_path))
-                self.programBeClassifiin(torch_model)
+                from nn import model,save_path
+                model.to(device)
+                model.load_state_dict(torch.load(save_path))
+                self.programBeClassifiin(model)
                 self.i +=1
             if self.saveToJson:
                 self.programBeSavin("data/data")
@@ -130,12 +130,13 @@ class FaceMeshWidget(QWidget):
     def programBeClassifiin(self,torch_model):
         pre =torch.tensor([])
         pre =torch.cat((pre, torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32).to(device)))
-        if self.i>3:
+        if self.i>0:
             self.i=0
             out = torch_model(pre)
-            _,predicted =torch.max((torch.mean(out)), dim=0)
-            print(out)
+            _,predicted =torch.max((torch.mean(out, dim=0)), dim=0)
+            print(predicted)
             self.classification_label.setText("no emotion" if  predicted == 0 else "emotion")
+            
 
 
     def programBeSavin(self,arg):
