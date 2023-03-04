@@ -37,12 +37,12 @@ class toTensor():
         return (torch.from_numpy(np.asarray(tuple[0])),torch.from_numpy(np.asarray(tuple[1])))
 
 device = torch.device('cpu')
-lr= 0.002
+lr= 0.02
 num_of_epochs = 500
 batch_size = 200
 dataset = ClassificationFaceDataset(transform=toTensor())
 dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=2)
-model = model.NeuralNet(input_size=dataset.dataX.shape[1], hidden_size=1000, num_of_classes=2, device=device, training=False)
+model = model.NeuralNet(input_size=dataset.dataX.shape[1], hidden_size=2000, num_of_classes=3, device=device, training=False)
 model = model.to(device=device)
 print(dataset.dataX.shape[1])
 loss_fcn = nn.CrossEntropyLoss()
