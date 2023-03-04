@@ -6,7 +6,9 @@ import torch
 import model
 import torch.nn as nn
 import copy
+import os
 
+save_path = "saved_model"
 
 class ClassificationFaceDataset(Dataset):
     test_percentage = 0.75
@@ -34,22 +36,7 @@ class ClassificationFaceDataset(Dataset):
         if self.transform: item=self.transform(item)
         return item
 
-class ClassificationEasyDataset(Dataset):
 
-    def __init__(self, transform=None) -> None:
-        self.dataX = np.loadtxt('./data/test.csv', delimiter=",", dtype=int)
-        
-        self.labels = self.dataX[:,-1]
-        self.dataX = self.dataX[:,:-1]
-        print(self.labels)
-        self.transform = transform
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, index):
-        item = (self.dataX[index], self.labels[index])
-        if self.transform: item=self.transform(item)
-        return item
 
 class toTensor():
     def __call__(self, tuple) -> any:
@@ -57,13 +44,15 @@ class toTensor():
 
 device = torch.device('cpu')
 lr= 0.002
-num_of_epochs = 500
-batch_size = 1
+num_of_epochs = 100
+batch_size = 100
 dataset = ClassificationFaceDataset(transform=toTensor())
 dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
-model = model.CustomMobileNet(dataset.dataX.shape[1], 2)
-
+model = model.NeuralNet(dataset.dataX.shape[1],1000, 2,device)
+# model = model.CustomMobileNet(dataset.dataX.shape[1], 2)
+if os.path.isfile(save_path):
+    model.load_state_dict(torch.load(save_path))
 # model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
 model.eval()
 print(dataset.dataX.shape[1])
@@ -113,4 +102,7 @@ def getCorrectAccuracyInputs(test=False):
         return dataset
 
 
-train(model)
+
+if __name__ == "__main__":
+    train(model)
+    torch.save(model.state_dict(),save_path)
