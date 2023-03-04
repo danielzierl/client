@@ -59,7 +59,7 @@ batch_size = 200
 dataset = ClassificationFaceDataset(transform=toTensor())
 dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
-model = model.NeuralNet(input_size=dataset.dataX.shape[1], hidden_size=1000, num_of_classes=2, device=device, training=False)
+# model = model.NeuralNet(input_size=dataset.dataX.shape[1], hidden_size=1000, num_of_classes=2, device=device, training=False)
 # model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
 model.eval()
 print(dataset.dataX.shape[1])

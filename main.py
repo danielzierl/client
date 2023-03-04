@@ -53,12 +53,14 @@ class FaceMeshWidget(QWidget):
         # Get face landmarks
         self.xarr=[]
         self.yarr=[]
+        self.zarr=[]
         if results.multi_face_landmarks:
             for face_landmarks in results.multi_face_landmarks:
                 for landmark in face_landmarks.landmark:
-                    self.x, self.y = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])
+                    self.x, self.y, self.z = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0]), int(landmark.z)
                     self.xarr.append(self.x)
                     self.yarr.append(self.y)
+                    self.zarr.append(self.z)
                     cv2.circle(frame, (self.x, self.y), 1, (0, 255, 0), -1)
 
         # Display video frame
@@ -72,7 +74,7 @@ class FaceMeshWidget(QWidget):
 
     def programBeSavin(self,arg):
         self.xarr.extend(self.yarr)
-        
+        self.xarr.extend(self.zarr)
         mean = 0
         for el in self.xarr:
             mean+=el
