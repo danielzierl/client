@@ -57,6 +57,6 @@ class NeuralNet(torch.nn.Module):
     def forward(self,x):
         out = x.view(-1,self.input_size)
         out = nn.functional.dropout(nn.functional.relu(self.l1(out)))
-        out = nn.functional.dropout( nn.functional.relu(self.l2(out)), p=0.5)
+        out = nn.functional.dropout( nn.functional.relu(self.l2(out)), p=0.1)
         out = self.l3(out)
         return out

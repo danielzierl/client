@@ -35,7 +35,7 @@ def load_data(file, train_rate=0.8):
 
     return X_train, X_test, y_train, y_test
 
-torch_model = CustomMobileNet(1404, 3).to(device)
+torch_model = CustomMobileNet(1404, 4).to(device)
 
 
 if __name__ == "__main__":
