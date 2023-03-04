@@ -75,7 +75,7 @@ class FaceMeshWidget(QWidget):
         self.array.append([self.xarr, self.yarr, self.zarr])
 
         if len(self.array) == 5:
-            self.mean_data = self.meanData()
+            self.mean_data.append(self.meanData())
             self.array = []
 
 
