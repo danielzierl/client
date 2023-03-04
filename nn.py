@@ -119,18 +119,11 @@ device = torch.device('cuda')
 
 def load_data(file, num_cls, train_rate=0.8):
     data = np.loadtxt(file, delimiter=",", dtype=float)
-    # X = data[:, :-2]
-    # y = data[:, -1]
-    #
-    # size = len(data)
 
     data_train, data_val = train_test_split(data, train_size=train_rate, random_state=43, shuffle=True)
 
-    # train, val = torch.utils.data.random_split(data, [math.ceil(size*rate), size-math.ceil(size*rate)])
     X_train, y_train = data_train[:, :-2], data_train[:, -1]
     X_test, y_test = data_val[:, :-2], data_val[:, -1]
-    # X_test = X[:math.ceil(size*train_rate), :]
-    #
     y_train = torch.from_numpy(y_train)
     y_test = torch.from_numpy(y_test)
 
@@ -142,8 +135,8 @@ def load_data(file, num_cls, train_rate=0.8):
 
     return X_train, X_test, y_train, y_test
 
+
 if __name__ == "__main__":
-    # train(model)
 
     class CustomDataset(Dataset):
         def __init__(self, X, y):
@@ -186,11 +179,12 @@ if __name__ == "__main__":
         _, labels = target.max(dim=0)
         return nn.CrossEntropyLoss()(input, labels)
 
-    batch_size = 20
+
 
     torch_model = CustomMobileNet(1403, 2).to(device)
 
     # Hyperparameters
+    batch_size = 20
     learning_rate = 0.02
     learning_rate2 = 0.2
     epochs = 20
