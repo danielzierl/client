@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
 
     # Hyperparameters
-    learning_rate = 0.0001
+    learning_rate = 0.001
     epochs = 20
 
     X_train, X_val, y_train, y_val = load_data(data_file, 0.2)
