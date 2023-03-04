@@ -6,6 +6,7 @@ import mediapipe as mp
 import numpy as np
 import pyqtgraph as pg
 import json
+from operator import add
 import os
 import csv
 
@@ -34,6 +35,12 @@ class FaceMeshWidget(QWidget):
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(50)
 
+        #tmp data mean
+        self.array = []
+
+        #mean data
+        self.mean_data = []
+
         # Setup face mesh detector
         self.mp_face_mesh = mp.solutions.face_mesh
         self.face_mesh = self.mp_face_mesh.FaceMesh()
@@ -54,6 +61,7 @@ class FaceMeshWidget(QWidget):
         self.xarr=[]
         self.yarr=[]
         self.zarr=[]
+
         if results.multi_face_landmarks:
             for face_landmarks in results.multi_face_landmarks:
                 for landmark in face_landmarks.landmark:
@@ -61,13 +69,32 @@ class FaceMeshWidget(QWidget):
                     self.xarr.append(self.x)
                     self.yarr.append(self.y)
                     self.zarr.append(self.z)
+
                     cv2.circle(frame, (self.x, self.y), 1, (0, 255, 0), -1)
+
+        self.array.append([self.xarr, self.yarr, self.zarr])
+
+        if len(self.array) == 5:
+            self.mean_data.append(self.meanData())
+            self.array = []
+
 
         # Display video frame
         self.video_widget.setImage(np.rot90(frame, 1))
         if self.saveToJson:
             self.programBeSavin("data/data")
 
+    def meanData(self):
+        x_sum, y_sum, z_sum = np.zeros(468), np.zeros(468),np.zeros(468)
+        for vector in self.array:
+            vector = np.array(vector)
+            x_sum = x_sum + (vector[0])
+            y_sum = y_sum + (vector[1])
+            z_sum = z_sum + (vector[2])
+        x_avg = x_sum / 5
+        y_avg = y_sum / 5
+        z_avg = z_sum / 5
+        return [x_avg, y_avg, z_avg]
     def closeEvent(self, event):
         self.capture.release()
         event.accept()
