@@ -1,6 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QMainWindow
 from PyQt5.QtGui import QPixmap
+from PyQt5 import QtCore, QtNetwork
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -9,7 +10,7 @@ import json
 from operator import add
 import os
 import csv
-
+import time
 import torch
 
 if torch.cuda.is_available():
@@ -82,12 +83,15 @@ class FaceMeshWidget(QWidget):
 
                     cv2.circle(frame, (self.x, self.y), 1, (0, 255, 0), -1)
         if len(self.xarr)>0:
+            if self.array is None:
+                self.array = np.array([])
             if len(self.array) == 5:
                 self.mean_data.append(self.meanData())
-                self.array = []
+                self.array = np.array([])
             self.xarr.extend(self.yarr)
             self.xarr.extend(self.zarr)
-            self.array.extend(self.xarr)
+            temp = np.array(self.xarr)
+            self.array = np.concatenate((self.array, temp))
             mean = 0
             for el in self.xarr:
                 mean+=el
@@ -104,25 +108,18 @@ class FaceMeshWidget(QWidget):
         # Display video frame
             self.video_widget.setImage(np.rot90(frame, 1))
             if self.classify_on_the_fly:
-                from nn import model,save_path
-                model.to(device)
-                model.load_state_dict(torch.load(save_path))
-                self.programBeClassifiin(model)
+                from nnm import torch,save_path
+                torch.to(device)
+                torch.load_state_dict(torch.load(save_path))
+                self.programBeClassifiin(torch)
                 self.i +=1
             if self.saveToJson:
                 self.programBeSavin("data/data")
 
-    # def meanData(self):
-    #     sum = np.zeros(1404)
-    #     self.array.view(-1,1404)
-    #         vector = np.array(vector)
-    #         x_sum = x_sum + (vector[0])
-    #         y_sum = y_sum + (vector[1])
-    #         z_sum = z_sum + (vector[2])
-    #     x_avg = x_sum / 5
-    #     y_avg = y_sum / 5
-    #     z_avg = z_sum / 5
-    #     return [x_avg, y_avg, z_avg]
+    def meanData(self):
+        self.array.view(-1,1404)
+        return np.average(self.array, dim=0)
+        
     def closeEvent(self, event):
         self.capture.release()
         event.accept()
@@ -131,12 +128,18 @@ class FaceMeshWidget(QWidget):
         pre =torch.tensor([])
         pre =torch.cat((pre, torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32).to(device)))
         if self.i>0:
+            bias = 2
             self.i=0
             out = torch_model(pre)
-            _,predicted =torch.max((torch.mean(out, dim=0)), dim=0)
-            print(predicted)
-            self.classification_label.setText("no emotion" if  predicted == 0 else "emotion")
+            out = torch.mean(out, dim=0)
+            for i in range(1,len(out)):
+                out[i]-=bias
+
+            _,predicted =torch.max((out), dim=0)
+            print(out)
             
+            self.classification_label.setText("emotion level:"+str(predicted.item()))
+            # self.doRequest() if predicted ==1 else 0
 
 
     def programBeSavin(self,arg):
@@ -145,6 +148,15 @@ class FaceMeshWidget(QWidget):
             if self.xarr:
                 writer = csv.writer(f)
                 writer.writerow(self.xarr)
+
+    def doRequest(self):   
+    
+        url = "https://iot.benetronic.com/mymodule/tCNKNYAsyc/gvnF/promobilx1@gmail.com/132/0/0"
+        req = QtNetwork.QNetworkRequest(QtCore.QUrl(url))
+        
+        self.nam = QtNetwork.QNetworkAccessManager()
+        
+        self.nam.get(req)  
             
 
 
@@ -243,19 +255,29 @@ class ContinuousMeasuring(QWidget):
 
         super().__init__()
         self.measuring = False
-        self.emotion = False
+        self.emotion = 0
         self.setGeometry(200, 200, 600, 400)
         layout = QVBoxLayout()
         self.facemesh_widget = FaceMeshWidget()
+        self.label = QLabel("0")
 
         self.normal_button = QPushButton("start")
         self.normal_button.clicked.connect(self.switchMode)
 
         self.label_button = QPushButton("no-emotion")
-        self.label_button.clicked.connect(self.switchLabel)
+        self.label_button.clicked.connect(lambda :self.setEm(0))
 
+        self.label2_button = QPushButton("emotion")
+        self.label2_button.clicked.connect(lambda :self.setEm(1))
+
+        self.label3_button = QPushButton("epic-emotion")
+        self.label3_button.clicked.connect(lambda :self.setEm(2))
+
+        layout.addWidget(self.label)
         layout.addWidget(self.normal_button)
         layout.addWidget(self.label_button)
+        layout.addWidget(self.label2_button)
+        layout.addWidget(self.label3_button)
 
         
 
@@ -263,7 +285,11 @@ class ContinuousMeasuring(QWidget):
         
         self.setLayout(layout)
     
-    
+    def setEm(self,num):
+        self.emotion=num
+        self.label.setText(str(self.emotion))
+        self.facemesh_widget.label = self.emotion
+
     def switchMode(self):
         self.measuring = not self.measuring
         self.normal_button.setText("stop" if self.measuring else "start")
@@ -273,6 +299,7 @@ class ContinuousMeasuring(QWidget):
         self.emotion = not self.emotion
         self.label_button.setText("emotion" if self.emotion else "no-emotion")
         self.facemesh_widget.label = int(self.emotion)
+
 
 
 
