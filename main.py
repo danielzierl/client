@@ -57,8 +57,8 @@ class FaceMeshWidget(QWidget):
             for face_landmarks in results.multi_face_landmarks:
                 for landmark in face_landmarks.landmark:
                     self.x, self.y = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])
-                    self.xarr.append(landmark.x)
-                    self.yarr.append(landmark.y)
+                    self.xarr.append(self.x)
+                    self.yarr.append(self.y)
                     cv2.circle(frame, (self.x, self.y), 1, (0, 255, 0), -1)
 
         # Display video frame
@@ -72,6 +72,17 @@ class FaceMeshWidget(QWidget):
 
     def programBeSavin(self,arg):
         self.xarr.extend(self.yarr)
+        
+        mean = 0
+        for el in self.xarr:
+            mean+=el
+        mean = mean/len(self.xarr)
+        std=0
+        for el in self.xarr:
+            std += (el-mean)**2
+        std = (std/len(self.xarr))**0.5
+        for i,el in enumerate(self.xarr):
+            self.xarr[i]= (el-mean)/std
         self.xarr.append(self.label)
         with open(f"{arg}.csv", 'a') as f:
             if self.xarr:
