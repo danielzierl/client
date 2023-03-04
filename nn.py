@@ -112,5 +112,5 @@ def getCorrectAccuracyInputs(test=False):
     else:
         return dataset
 
-
-train(model)
+if __name__ == "__main__":
+    train(model)

@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
 class NeuralNet(torch.nn.Module):
     def __init__(self, input_size,hidden_size, num_of_classes,device,training=True) -> None:
         super(NeuralNet,self).__init__()
@@ -17,6 +19,11 @@ class NeuralNet(torch.nn.Module):
         out = nn.functional.dropout( nn.functional.relu(self.l2(out)), p=0.5)
         out = self.l3(out)
         return out
+
+
+class MobNet(torch.nn.Module):
+    def __init__(self, input_size,hidden_size, num_of_classes,device,training=True) -> None:
+        super(NeuralNet,self).__init__()
 
 class CustomMobileNet(torch.nn.Module):
     def __init__(self, input_size, output_size) -> None:
