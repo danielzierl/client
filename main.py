@@ -16,6 +16,7 @@ if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
+device = torch.device("cpu")
 
 
 class FaceMeshWidget(QWidget):
@@ -128,8 +129,9 @@ class FaceMeshWidget(QWidget):
     def programBeClassifiin(self,torch_model):
         
         pre = torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32).to(device)
-        
+
         out = torch_model(pre)
+        print(out)
         _,predicted =torch.max((out), dim=1)
         self.classification_label.setText("no emotion" if  predicted == 0 else "emotion")
 
@@ -140,7 +142,6 @@ class FaceMeshWidget(QWidget):
             if self.xarr:
                 writer = csv.writer(f)
                 writer.writerow(self.xarr)
-            
 
 
 class MainWindow(QMainWindow):

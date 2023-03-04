@@ -23,7 +23,7 @@ class CustomMobileNet(torch.nn.Module):
             super(CustomMobileNet, self).__init__()
             self.flatten = nn.Flatten()
             self.input_size = input_size
-            self.top = nn.Linear(in_features=input_size, out_features=50 * 50 * 3)
+            self.top = nn.Linear(in_features=input_size, out_features=224 * 224 * 3)
             self.mid = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=True)
             for param in self.mid.parameters():
                 param.requires_grad = False
@@ -33,10 +33,29 @@ class CustomMobileNet(torch.nn.Module):
         def forward(self, x):
             out = self.flatten(x)
             out = self.top(out)
-            out = out.view(-1, 3, 50, 50)
+            out = out.view(-1, 3, 224, 224)
             out = self.mid(out)
             out = self.bottom(out)
             # out = self.soft(out)
             return out
 
+
+class CustomNet(torch.nn.Module):
+        def __init__(self, input_size, output_size) -> None:
+            super(CustomNet, self).__init__()
+            self.flatten = nn.Flatten()
+            self.linear_relu_stack = nn.Sequential(
+                nn.Linear(input_size, 512),
+                nn.ReLU(),
+                nn.Linear(512, 256),
+                nn.ReLU(),
+                nn.Linear(256, 128),
+                nn.ReLU(),
+                nn.Linear(128, output_size),
+            )
+
+        def forward(self, x):
+            x = self.flatten(x)
+            logits = self.linear_relu_stack(x)
+            return logits
 

@@ -7,7 +7,8 @@ import torch
 import torch.nn as nn
 import copy
 import os
-from model import CustomMobileNet
+from utils import merge
+from model import CustomMobileNet, CustomNet
 
 save_path = "saved_model"
 
@@ -15,18 +16,26 @@ if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
+# device = torch.device("cpu")
 data_file = "./data/data.csv"
+data_dir = "./data/new/dataset_1"
+
+NUM_CLASSES = 4
+NUM_FEATS = 1404
 
 
 
-def load_data(file, train_rate=0.8):
-    data = np.loadtxt(file, delimiter=",", dtype=float)
+def load_data(file, train_rate=0.8, dir=False):
+    if dir:
+        data = merge(file)
+    else:
+        data = np.loadtxt(file, delimiter=",", dtype=float)
     indexes = range(len(data)-1)
 
     y = torch.from_numpy(data[:, -1])
     data = data[:, :-1]
 
-    y = nn.functional.one_hot(y.to(torch.int64))
+    # y = nn.functional.one_hot(y.to(torch.int64))
 
     train_idx, test_idx = train_test_split(indexes, train_size=train_rate, random_state=43, shuffle=True)
 
@@ -35,7 +44,7 @@ def load_data(file, train_rate=0.8):
 
     return X_train, X_test, y_train, y_test
 
-torch_model = CustomMobileNet(1404, 2).to(device)
+torch_model = CustomMobileNet(NUM_FEATS, NUM_CLASSES).to(device)
 
 
 if __name__ == "__main__":
@@ -55,27 +64,19 @@ if __name__ == "__main__":
             return x_value, y_value
 
 
-    
-
-
-    def cross_entropy_one_hot(input, target):
-        _, labels = target.max(dim=0)
-        return nn.CrossEntropyLoss()(input, labels)
-
-    batch_size = 20
-
-
     # Hyperparameters
-    learning_rate = 0.002
-    epochs = 20
+    batch_size = 10
+    learning_rate = 0.0002
+    epochs = 3
 
-    X_train, X_val, y_train, y_val = load_data(data_file, 0.2)
+    X_train, X_val, y_train, y_val = load_data(data_dir, 0.2, dir=True)
+
     train_dataset = CustomDataset(X_train, y_train)
     val_dataset = CustomDataset(X_val, y_val)
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
     # Initialize the loss function
-    loss_fn = nn.BCEWithLogitsLoss()
+    loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(torch_model.parameters(), lr=learning_rate)
     # step_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 20, gamma=0.9)
 
@@ -84,7 +85,7 @@ if __name__ == "__main__":
         size = len(dataloader.dataset)
         for batch, (X, y) in enumerate(dataloader):
             # Compute prediction and loss
-            y = torch.reshape(y, (-1, y.size()[-1]))
+            y = torch.reshape(y, (-1,)).type(torch.int64)
             pred = model(X)
             loss = loss_fn(pred, y)
             # loss = torch.sum(torch.eq(pred, y))
@@ -107,10 +108,10 @@ if __name__ == "__main__":
 
         with torch.no_grad():
             for X, y in dataloader:
-                y = torch.reshape(y, (-1, y.size()[-1]))
+                y = torch.reshape(y, (-1, )).type(torch.int64)
                 pred = model(X)
                 test_loss += loss_fn(pred, y).item()
-                correct += (pred.argmax(1) == y.argmax(1)).type(torch.float).sum().item()
+                correct += (pred.argmax(1) == y).type(torch.float).sum().item()
 
         test_loss /= num_batches
         correct /= size
@@ -118,8 +119,8 @@ if __name__ == "__main__":
             print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
         return correct
 
-    if os.path.isfile(save_path):
-            torch_model.load_state_dict(torch.load(save_path))
+    # if os.path.isfile(save_path):
+    #         torch_model.load_state_dict(torch.load(save_path))
     for t in range(epochs):
         
         # if t == 50:
@@ -127,5 +128,5 @@ if __name__ == "__main__":
         print(f"Epoch {t + 1}\n---------------------------------")
         train_loop(train_dataloader, torch_model, loss_fn, optimizer)
         test_loop(val_dataloader, torch_model, loss_fn)
-        torch.save(torch_model.state_dict(),save_path)
+        torch.save(torch_model.state_dict(), save_path)
     print("Done! ")
