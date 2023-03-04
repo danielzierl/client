@@ -14,15 +14,15 @@ data_file = "./data/data.csv"
 def load_data(file, train_rate=0.8):
     data = np.loadtxt(file, delimiter=",", dtype=float)
 
-    data_train, data_val = train_test_split(data, train_size=train_rate, random_state=43, shuffle=True)
+    data_train, data_val = train_test_split(data, train_size=0.8, random_state=43, shuffle=True)
 
     X_train, y_train = data_train[:, :-2], data_train[:, -1]
     X_test, y_test = data_val[:, :-2], data_val[:, -1]
     y_train = torch.from_numpy(y_train)
     y_test = torch.from_numpy(y_test)
 
-    y_train = torch.reshape(y_train, (-1, 1))
-    y_test = torch.reshape(y_test, (-1, 1))
+    # y_train = torch.reshape(y_train, (-1, 1))
+    # y_test = torch.reshape(y_test, (-1, 1))
 
     y_train = nn.functional.one_hot(y_train.to(torch.int64))
     y_test = nn.functional.one_hot(y_test.to(torch.int64))
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     torch_model = CustomMobileNet(1403, 2).to(device)
 
     # Hyperparameters
-    learning_rate = 0.02
+    learning_rate = 0.002
     learning_rate2 = 0.2
     epochs = 20
 
