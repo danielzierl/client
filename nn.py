@@ -53,9 +53,9 @@ class ClassificationEasyDataset(Dataset):
 
 class toTensor():
     def __call__(self, tuple) -> any:
-        return (torch.from_numpy(np.asarray(tuple[0])),torch.from_numpy(np.asarray(tuple[1])))
+        return (torch.from_numpy(np.asarray(tuple[0])), torch.from_numpy(np.asarray(tuple[1])))
 
-device = torch.device('cpu')
+device = torch.device('cuda')
 lr= 0.002
 num_of_epochs = 500
 batch_size = 1
@@ -63,12 +63,13 @@ dataset = ClassificationFaceDataset(transform=toTensor())
 dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
 model = model.CustomMobileNet(dataset.dataX.shape[1], 2)
+model = model.to(device)
 
 # model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
-model.eval()
+# model.eval()
 print(dataset.dataX.shape[1])
 loss_fcn = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=lr)
+optimizer = torch.optim.SGD(model.parameters(),lr=lr)
 step_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 20, gamma=0.9)
 
 
@@ -76,9 +77,8 @@ def train(model):
     for epoch in range(num_of_epochs):
         for i, (dataX, labels) in enumerate(dataloader):
             labels = labels.type(torch.LongTensor).to(device)
-            dataX = dataX.to(device)
-            dataX = dataX.to(torch.float32)
-            output = model(dataX).to(device)
+            dataX = dataX.to(device).to(torch.float32)
+            output = model(dataX)
             loss = loss_fcn(output, labels).to(device)
 
             optimizer.zero_grad()
@@ -89,15 +89,15 @@ def train(model):
                 print(f"epoch={epoch}, loss={loss}, test_accuracy={acc}, train_accuracy={evaluateAccuracy(model,dataset,test=False)}")
         step_lr_scheduler.step()
 
+
 def evaluateAccuracy(model,dataset:ClassificationFaceDataset, test=False):
-    corr=0
+    corr = 0
     for i, (dataX, labels) in enumerate(getCorrectAccuracyInputs(test)):
         labels = labels.type(torch.LongTensor).to(device)
-        dataX = dataX.to(device)
-        dataX = dataX.to(torch.float32)
-        output =  model(dataX).to(device)
+        dataX = dataX.to(device).to(torch.float32)
+        output = model(dataX).to(device)
         _,predicted =torch.max(output, dim=1)
-        if  test :
+        if test:
             # print(labels)
             # print(dataX[:3])
             # print(predicted)
@@ -105,6 +105,7 @@ def evaluateAccuracy(model,dataset:ClassificationFaceDataset, test=False):
         corr += (predicted[0]).eq(labels).sum()
     acc = corr /(dataset.total_count*(1-dataset.test_percentage if test else dataset.test_percentage))
     return acc.item()
+
 
 def getCorrectAccuracyInputs(test=False):
     if test:
