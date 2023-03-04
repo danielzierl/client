@@ -6,9 +6,11 @@ import torch
 import model
 import torch.nn as nn
 import copy
+mouth_inds = [
+    57,185,40,39,37, 0, 167, 269, 270, 409, 287, 146,91,181,84,17,314,405,321,375
+]
 
 class ClassificationFaceDataset(Dataset):
-
 
     def __init__(self, transform=None) -> None:
         test_percentage = 0.8
@@ -37,17 +39,17 @@ class toTensor():
         return (torch.from_numpy(np.asarray(tuple[0])),torch.from_numpy(np.asarray(tuple[1])))
 
 device = torch.device('cpu')
-lr= 0.02
+lr= 0.002
 num_of_epochs = 500
-batch_size = 200
+batch_size = 20
 dataset = ClassificationFaceDataset(transform=toTensor())
 dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=2)
-model = model.NeuralNet(input_size=dataset.dataX.shape[1], hidden_size=2000, num_of_classes=3, device=device, training=False)
+model = model.NeuralNet(input_size=dataset.dataX.shape[1], hidden_size=1000, num_of_classes=5, device=device, training=False)
 model = model.to(device=device)
 print(dataset.dataX.shape[1])
 loss_fcn = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(),lr=lr)
-step_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 20, gamma=0.9)
+step_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, gamma=0.5)
 save_path = "saved_model"
 
 def train(model):
