@@ -12,6 +12,12 @@ import csv
 
 import torch
 
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
+
+
 class FaceMeshWidget(QWidget):
     def __init__(self, saveToJson=False, classify_on_the_fly=False, classificationLabel=None):
         super().__init__()
@@ -97,7 +103,10 @@ class FaceMeshWidget(QWidget):
         # Display video frame
             self.video_widget.setImage(np.rot90(frame, 1))
             if self.classify_on_the_fly:
-                self.programBeClassifiin()
+                from nnm import torch_model,save_path
+                torch_model.to(device)
+                torch_model.load_state_dict(torch.load(save_path))
+                self.programBeClassifiin(torch_model)
             if self.saveToJson:
                 self.programBeSavin("data/data")
 
@@ -116,14 +125,11 @@ class FaceMeshWidget(QWidget):
         self.capture.release()
         event.accept()
 
-    def programBeClassifiin(self):
-        from nn import save_path
-        from model import NeuralNet
-        pre = torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32)
-        model = NeuralNet(pre.shape[1],1000, 2,device=torch.device('cpu'))
-        model.load_state_dict(torch.load(save_path))
-        # print(pre.shape)
-        out = model(pre)
+    def programBeClassifiin(self,torch_model):
+        
+        pre = torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32).to(device)
+        
+        out = torch_model(pre)
         _,predicted =torch.max((out), dim=1)
         self.classification_label.setText("no emotion" if  predicted == 0 else "emotion")
 
