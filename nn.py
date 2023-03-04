@@ -44,7 +44,7 @@ class toTensor():
 
 device = torch.device('cpu')
 lr= 0.002
-num_of_epochs = 100
+num_of_epochs = 10
 batch_size = 100
 dataset = ClassificationFaceDataset(transform=toTensor())
 dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=2)

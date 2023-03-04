@@ -78,7 +78,7 @@ class FaceMeshWidget(QWidget):
             std = (std/len(self.xarr))**0.5
             for i,el in enumerate(self.xarr):
                 self.xarr[i]= (el-mean)/std
-            print(self.xarr)
+            # print(self.xarr)
             # Display video frame
             self.video_widget.setImage(np.rot90(frame, 1))
             if self.classify_on_the_fly:
@@ -91,12 +91,15 @@ class FaceMeshWidget(QWidget):
         event.accept()
 
     def programBeClassifiin(self):
-        from nn import save_path,model
+        from nn import save_path
+        from model import NeuralNet
+        pre = torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32)
+        model = NeuralNet(pre.shape[1],1000, 2,device=torch.device('cpu'))
         model.load_state_dict(torch.load(save_path))
-        pre = self.xarr
+        # print(pre.shape)
         out = model(pre)
         _,predicted =torch.max((out), dim=1)
-        self.classification_label.setText("no emotion" if  predicted ==0 else "emotion")
+        self.classification_label.setText("no emotion" if  predicted == 0 else "emotion")
 
 
     def programBeSavin(self,arg):
@@ -120,7 +123,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
 
         # Setup buttons
-        calibration_button = QPushButton("Calibration")
+        calibration_button = QPushButton("Photo booth")
         calibration_button.clicked.connect(self.open_calibration_window)
         layout.addWidget(calibration_button)
 
