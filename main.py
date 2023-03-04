@@ -75,6 +75,7 @@ class FaceMeshWidget(QWidget):
 
                     cv2.circle(frame, (self.x, self.y), 1, (0, 255, 0), -1)
         if len(self.xarr)>0:
+            self.array.append([self.xarr, self.yarr, self.zarr])
             self.xarr.extend(self.yarr)
             self.xarr.extend(self.zarr)
             mean = 0
@@ -87,12 +88,10 @@ class FaceMeshWidget(QWidget):
             std = (std/len(self.xarr))**0.5
             for i,el in enumerate(self.xarr):
                 self.xarr[i]= (el-mean)/std
-            # print(self.xarr)
-            self.array.append([self.xarr, self.yarr, self.zarr])
 
-        if len(self.array) == 5:
-            self.mean_data.append(self.meanData())
-            self.array = []
+        # if len(self.array) == 5:
+        #     self.mean_data.append(self.meanData())
+        #     self.array = []
 
 
         # Display video frame
@@ -102,17 +101,17 @@ class FaceMeshWidget(QWidget):
             if self.saveToJson:
                 self.programBeSavin("data/data")
 
-    def meanData(self):
-        x_sum, y_sum, z_sum = np.zeros(468), np.zeros(468),np.zeros(468)
-        for vector in self.array:
-            vector = np.array(vector)
-            x_sum = x_sum + (vector[0])
-            y_sum = y_sum + (vector[1])
-            z_sum = z_sum + (vector[2])
-        x_avg = x_sum / 5
-        y_avg = y_sum / 5
-        z_avg = z_sum / 5
-        return [x_avg, y_avg, z_avg]
+    # def meanData(self):
+    #     x_sum, y_sum, z_sum = np.zeros(468), np.zeros(468),np.zeros(468)
+    #     for vector in self.array:
+    #         vector = np.array(vector)
+    #         x_sum = x_sum + (vector[0])
+    #         y_sum = y_sum + (vector[1])
+    #         z_sum = z_sum + (vector[2])
+    #     x_avg = x_sum / 5
+    #     y_avg = y_sum / 5
+    #     z_avg = z_sum / 5
+    #     return [x_avg, y_avg, z_avg]
     def closeEvent(self, event):
         self.capture.release()
         event.accept()
