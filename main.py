@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QVBoxLay
 from PyQt5.QtGui import QPixmap
 from PyQt5 import QtCore, QtNetwork
 import cv2
+import collections
 
 from selenium import webdriver
 from selenium.webdriver import ActionChains
@@ -55,14 +56,16 @@ class FaceMeshWidget(QWidget):
         self.video_widget.ui.roiBtn.hide()
         self.video_widget.ui.menuBtn.hide()
 
+        self.epic_queue = collections.deque(maxlen=6)
+
         self.pdfReader = pdfreader.pdfReader
-        chromedriver_path = 'C:/Users/jakub/Desktop/chromedriver.exe'
+        chromedriver_path = "./chromedriver.exe"
         service = Service(chromedriver_path)
 
         # Vytvoření instance třídy webdriver.Chrome s použitím objektu Service
         self.driver = webdriver.Chrome(service=service)
         # self.driver = webdriver.Chrome('C:/Users/jakub/Desktop/chromedriver.exe')
-        url = "file:///C:/Users/jakub/PycharmProjects/client/book.pdf"
+        url = "file:///C:/Programming/Python Projects/client/book.pdf"
         # Otevření PDF souboru v prohlížeči
         self.driver.get(url)
 
@@ -87,9 +90,15 @@ class FaceMeshWidget(QWidget):
         # Setup face mesh detector
         self.mp_face_mesh = mp.solutions.face_mesh
         self.face_mesh = self.mp_face_mesh.FaceMesh()
-        from classificators import combine_models
 
+
+        from classificators import combine_models
         self.model = combine_models()
+
+        # Time
+        self.delay = 2
+        self.pdf_lock_time = 0
+        self.lock_flag = False
 
     def update_frame(self):
         # Get video frame
@@ -142,11 +151,9 @@ class FaceMeshWidget(QWidget):
             # Display video frame
             self.video_widget.setImage(np.rot90(frame, 1))
             if self.classify_on_the_fly:
-                from nn import model, save_path
-                model.to(device)
-                model.load_state_dict(torch.load(save_path))
-                self.programBeClassifiin(model)
-                self.i += 1
+
+                self.programBeClassifiin(self.model)
+
             if self.saveToJson:
                 self.programBeSavin("data/data")
 
@@ -167,26 +174,40 @@ class FaceMeshWidget(QWidget):
             preds.append(model.predict(np.array(self.xarr).reshape(1, -1)))
 
         preds = np.concatenate(preds).astype(int)
-        print(preds)
-        out_pred = np.bincount(preds).argmax()
+
+        for pred in preds:
+            self.epic_queue.append(pred)
+
+        out_pred = max(set(self.epic_queue), key=self.epic_queue.count)
+
+        print(out_pred)
+        # out_pred = np.bincount(preds).argmax()
 
         # pre = torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32).to(device)
         #
         # out = torch_model(pre)
         # _,predicted =torch.max((out), dim=1)
-        self.classification_label.setText("no emotion" if  out_pred == 0 else f"emotion {out_pred}")
+        self.classification_label.setText("no emotion" if out_pred == 0 else f"emotion {out_pred}")
             
         predicted = out_pred
 
-        if predicted == 1:
-            self.pdfReader.on_key_release(self.actions, 1)
-        if predicted == 2:
-            self.pdfReader.on_key_release(self.actions, 2)
-        if predicted == 3:
-            self.pdfReader.on_key_release(self.actions, 3)
-        if predicted == 4:
-            self.driver.quit()
-            pass
+        if self.lock_flag:
+            current_t = time.time()
+            if self.pdf_lock_time + self.delay < current_t:
+                self.lock_flag = False
+        else:
+            self.pdf_lock_time = time.time()
+            self.lock_flag = True
+
+            if predicted == 1:
+                self.pdfReader.on_key_release(self.actions, 1)
+            if predicted == 3:
+                self.pdfReader.on_key_release(self.actions, 3)
+            if predicted == 10:
+                self.pdfReader.on_key_release(self.actions, 2)
+            if predicted == 2:
+                self.driver.quit()
+                pass
 
         # self.driver.quit()
 
