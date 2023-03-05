@@ -1,14 +1,26 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QMainWindow
 from PyQt5.QtGui import QPixmap
+from PyQt5 import QtCore, QtNetwork
 import cv2
+
+from selenium import webdriver
+from selenium.webdriver import ActionChains
+from selenium.webdriver.chrome.service import Service
+
 import mediapipe as mp
 import numpy as np
+from selenium.webdriver.common.keys import Keys
 import pyqtgraph as pg
 import json
 from operator import add
 import os
+import pdfreader
 import csv
+import time
+import torch
+import pyautogui
+import mouse
 
 import torch
 
@@ -22,9 +34,17 @@ class FaceMeshWidget(QWidget):
     def __init__(self, saveToJson=False, classify_on_the_fly=False, classificationLabel=None):
         super().__init__()
         self.saveToJson = saveToJson
-        self.classify_on_the_fly= classify_on_the_fly
+        self.classify_on_the_fly = classify_on_the_fly
         self.classification_label = classificationLabel
-        self.label =0
+        self.label = 0
+        self.a = 0
+        self.b = 0
+        self.c = 0
+        self.d = 0
+        self.e = 0
+        self.x = 1000
+        self.y = 1000
+        self.i = 0
         # Setup layout
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -35,8 +55,22 @@ class FaceMeshWidget(QWidget):
         self.video_widget.ui.roiBtn.hide()
         self.video_widget.ui.menuBtn.hide()
 
-        layout.addWidget(self.video_widget)
+        self.pdfReader = pdfreader.pdfReader
+        chromedriver_path = 'C:/Users/jakub/Desktop/chromedriver.exe'
+        service = Service(chromedriver_path)
 
+        # Vytvoření instance třídy webdriver.Chrome s použitím objektu Service
+        self.driver = webdriver.Chrome(service=service)
+        # self.driver = webdriver.Chrome('C:/Users/jakub/Desktop/chromedriver.exe')
+        url = "file:///C:/Users/jakub/PycharmProjects/client/book.pdf"
+        # Otevření PDF souboru v prohlížeči
+        self.driver.get(url)
+
+        self.actions = ActionChains(self.driver)
+
+        # Otevření PDF souboru v prohlížeči
+
+        layout.addWidget(self.video_widget)
 
         # Start video capture
         self.capture = cv2.VideoCapture(0)
@@ -44,10 +78,10 @@ class FaceMeshWidget(QWidget):
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(50)
 
-        #tmp data mean
+        # tmp data mean
         self.array = []
 
-        #mean data
+        # mean data
         self.mean_data = []
 
         # Setup face mesh detector
@@ -70,61 +104,56 @@ class FaceMeshWidget(QWidget):
         results = self.face_mesh.process(frame)
 
         # Get face landmarks
-        self.xarr=[]
-        self.yarr=[]
-        self.zarr=[]
+        self.xarr = []
+        self.yarr = []
+        self.zarr = []
 
         if results.multi_face_landmarks:
             for face_landmarks in results.multi_face_landmarks:
-                for landmark in face_landmarks.landmark:
-                    self.x, self.y, self.z = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0]), int(landmark.z)
+                for id, landmark in enumerate(face_landmarks.landmark):
+                    # from nn import mouth_inds
+                    self.x, self.y, self.z = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0]), int(
+                        landmark.z)
                     self.xarr.append(self.x)
                     self.yarr.append(self.y)
                     self.zarr.append(self.z)
-
                     cv2.circle(frame, (self.x, self.y), 1, (0, 255, 0), -1)
-        if len(self.xarr)>0:
-            self.array.append([self.xarr, self.yarr, self.zarr])
+        if len(self.xarr) > 0:
+            if self.array is None:
+                self.array = np.array([])
+            if len(self.array) == 5:
+                self.mean_data.append(self.meanData())
+                self.array = np.array([])
             self.xarr.extend(self.yarr)
             self.xarr.extend(self.zarr)
+            temp = np.array(self.xarr)
+            self.array = np.concatenate((self.array, temp))
             mean = 0
             for el in self.xarr:
-                mean+=el
-            mean = mean/len(self.xarr)
-            std=0
+                mean += el
+            mean = mean / len(self.xarr)
+            std = 0
             for el in self.xarr:
-                std += (el-mean)**2
-            std = (std/len(self.xarr))**0.5
-            for i,el in enumerate(self.xarr):
-                self.xarr[i]= (el-mean)/std
+                std += (el - mean) ** 2
+            std = (std / len(self.xarr)) ** 0.5
+            for i, el in enumerate(self.xarr):
+                self.xarr[i] = (el - mean) / std
 
-        # if len(self.array) == 5:
-        #     self.mean_data.append(self.meanData())
-        #     self.array = []
-
-
-        # Display video frame
+            # Display video frame
             self.video_widget.setImage(np.rot90(frame, 1))
             if self.classify_on_the_fly:
-                # from nnm import torch_model,save_path
-                # torch_model.to(device)
-                # torch_model.load_state_dict(torch.load(save_path))
-                torch_model = self.model
-                self.programBeClassifiin(torch_model)
+                from nn import model, save_path
+                model.to(device)
+                model.load_state_dict(torch.load(save_path))
+                self.programBeClassifiin(model)
+                self.i += 1
             if self.saveToJson:
                 self.programBeSavin("data/data")
 
-    # def meanData(self):
-    #     x_sum, y_sum, z_sum = np.zeros(468), np.zeros(468),np.zeros(468)
-    #     for vector in self.array:
-    #         vector = np.array(vector)
-    #         x_sum = x_sum + (vector[0])
-    #         y_sum = y_sum + (vector[1])
-    #         z_sum = z_sum + (vector[2])
-    #     x_avg = x_sum / 5
-    #     y_avg = y_sum / 5
-    #     z_avg = z_sum / 5
-    #     return [x_avg, y_avg, z_avg]
+    def meanData(self):
+        self.array.view(-1, 1404)
+        return np.average(self.array, dim=0)
+
     def closeEvent(self, event):
         self.capture.release()
         event.accept()
@@ -146,15 +175,35 @@ class FaceMeshWidget(QWidget):
         # out = torch_model(pre)
         # _,predicted =torch.max((out), dim=1)
         self.classification_label.setText("no emotion" if  out_pred == 0 else f"emotion {out_pred}")
+            
+        predicted = out_pred
 
+        if predicted == 1:
+            self.pdfReader.on_key_release(self.actions, 1)
+        if predicted == 2:
+            self.pdfReader.on_key_release(self.actions, 2)
+        if predicted == 3:
+            self.pdfReader.on_key_release(self.actions, 3)
+        if predicted == 4:
+            self.driver.quit()
+            pass
 
-    def programBeSavin(self,arg):
+        # self.driver.quit()
+
+    def programBeSavin(self, arg):
         self.xarr.append(self.label)
         with open(f"{arg}.csv", 'a') as f:
             if self.xarr:
                 writer = csv.writer(f)
                 writer.writerow(self.xarr)
-            
+
+    def doRequest(self, url):
+
+        req = QtNetwork.QNetworkRequest(QtCore.QUrl(url))
+
+        self.nam = QtNetwork.QNetworkAccessManager()
+
+        self.nam.get(req)
 
 
 class MainWindow(QMainWindow):
@@ -196,6 +245,7 @@ class MainWindow(QMainWindow):
         self.run_window = RunClassifiationWindow()
         self.run_window.show()
 
+
 class CalibrationWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -207,15 +257,15 @@ class CalibrationWindow(QWidget):
         self.facemesh_widget = FaceMeshWidget()
         # Setup buttons
         normal_button = QPushButton("Normal")
-        normal_button.clicked.connect(lambda: self.save_landmarks("normal",self.facemesh_widget))
+        normal_button.clicked.connect(lambda: self.save_landmarks("normal", self.facemesh_widget))
         layout.addWidget(normal_button)
 
         face_button = QPushButton("Face")
-        face_button.clicked.connect(lambda: self.save_landmarks("face",self.facemesh_widget))
+        face_button.clicked.connect(lambda: self.save_landmarks("face", self.facemesh_widget))
         layout.addWidget(face_button)
 
         # Setup facemesh widget
-        
+
         layout.addWidget(self.facemesh_widget)
         self.setLayout(layout)
 
@@ -228,6 +278,7 @@ class CalibrationWindow(QWidget):
         with open(f"{expression}.json", "w") as f:
             json.dump(data, f)
 
+
 class RunClassifiationWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -238,41 +289,57 @@ class RunClassifiationWindow(QWidget):
         self.labelino = QLabel("no emotion")
         self.facemesh_widget = FaceMeshWidget(classificationLabel=self.labelino, classify_on_the_fly=True)
 
-
-        
         layout.addWidget(self.labelino)
         layout.addWidget(self.facemesh_widget)
-        
+
         self.setLayout(layout)
-    
 
 
 class ContinuousMeasuring(QWidget):
     def __init__(self):
-
         super().__init__()
         self.measuring = False
-        self.emotion = False
+        self.emotion = 0
         self.setGeometry(200, 200, 600, 400)
         layout = QVBoxLayout()
         self.facemesh_widget = FaceMeshWidget()
+        self.label = QLabel("0")
 
         self.normal_button = QPushButton("start")
         self.normal_button.clicked.connect(self.switchMode)
 
         self.label_button = QPushButton("no-emotion")
-        self.label_button.clicked.connect(self.switchLabel)
+        self.label_button.clicked.connect(lambda: self.setEm(0))
 
+        self.label2_button = QPushButton("emotion")
+        self.label2_button.clicked.connect(lambda: self.setEm(1))
+
+        self.label3_button = QPushButton("epic-emotion")
+        self.label3_button.clicked.connect(lambda: self.setEm(2))
+
+        self.label4_button = QPushButton("super-emotion")
+        self.label4_button.clicked.connect(lambda: self.setEm(3))
+
+        self.label5_button = QPushButton("super-emotion")
+        self.label5_button.clicked.connect(lambda: self.setEm(4))
+
+        layout.addWidget(self.label)
         layout.addWidget(self.normal_button)
         layout.addWidget(self.label_button)
-
-        
+        layout.addWidget(self.label2_button)
+        layout.addWidget(self.label3_button)
+        layout.addWidget(self.label4_button)
+        layout.addWidget(self.label5_button)
 
         layout.addWidget(self.facemesh_widget)
-        
+
         self.setLayout(layout)
-    
-    
+
+    def setEm(self, num):
+        self.emotion = num
+        self.label.setText(str(self.emotion))
+        self.facemesh_widget.label = self.emotion
+
     def switchMode(self):
         self.measuring = not self.measuring
         self.normal_button.setText("stop" if self.measuring else "start")
@@ -282,10 +349,6 @@ class ContinuousMeasuring(QWidget):
         self.emotion = not self.emotion
         self.label_button.setText("emotion" if self.emotion else "no-emotion")
         self.facemesh_widget.label = int(self.emotion)
-
-
-
-
 
 
 if __name__ == "__main__":
