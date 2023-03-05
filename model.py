@@ -26,7 +26,7 @@ class CustomMobileNet(torch.nn.Module):
             self.top = nn.Linear(in_features=input_size, out_features=224 * 224 * 3)
             self.mid = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=True)
             for param in self.mid.parameters():
-                param.requires_grad = False
+                param.requires_grad = True
             self.bottom = nn.Linear(1000, output_size)
             self.soft = nn.Softmax()
 

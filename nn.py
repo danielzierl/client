@@ -12,7 +12,7 @@ class ClassificationFaceDataset(Dataset):
 
     def __init__(self, transform=None) -> None:
         test_percentage = 0.8
-        self.dataX = np.loadtxt('./data/data.csv', delimiter=",", dtype=float)
+        self.dataX = np.loadtxt('data/new/my_data/data.csv', delimiter=",", dtype=float)
         np.random.shuffle(self.dataX)
         data_count = self.dataX.shape[0]
         train_data_count = round(data_count * test_percentage)

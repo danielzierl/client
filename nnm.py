@@ -17,8 +17,8 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 # device = torch.device("cpu")
-data_file = "./data/data.csv"
-data_dir = "./data/new/dataset_1"
+data_file = "data/new/my_data/data.csv"
+data_dir = "./data/new/my_data"
 
 NUM_CLASSES = 4
 NUM_FEATS = 1404
@@ -65,9 +65,9 @@ if __name__ == "__main__":
 
 
     # Hyperparameters
-    batch_size = 10
-    learning_rate = 0.0002
-    epochs = 3
+    batch_size = 30
+    learning_rate = 0.02
+    epochs = 5
 
     X_train, X_val, y_train, y_val = load_data(data_dir, 0.2, dir=True)
 

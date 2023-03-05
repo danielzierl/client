@@ -53,6 +53,9 @@ class FaceMeshWidget(QWidget):
         # Setup face mesh detector
         self.mp_face_mesh = mp.solutions.face_mesh
         self.face_mesh = self.mp_face_mesh.FaceMesh()
+        from classificators import combine_models
+
+        self.model = combine_models()
 
     def update_frame(self):
         # Get video frame
@@ -103,9 +106,10 @@ class FaceMeshWidget(QWidget):
         # Display video frame
             self.video_widget.setImage(np.rot90(frame, 1))
             if self.classify_on_the_fly:
-                from nnm import torch_model,save_path
-                torch_model.to(device)
-                torch_model.load_state_dict(torch.load(save_path))
+                # from nnm import torch_model,save_path
+                # torch_model.to(device)
+                # torch_model.load_state_dict(torch.load(save_path))
+                torch_model = self.model
                 self.programBeClassifiin(torch_model)
             if self.saveToJson:
                 self.programBeSavin("data/data")
@@ -126,12 +130,22 @@ class FaceMeshWidget(QWidget):
         event.accept()
 
     def programBeClassifiin(self,torch_model):
-        
-        pre = torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32).to(device)
-        
-        out = torch_model(pre)
-        _,predicted =torch.max((out), dim=1)
-        self.classification_label.setText("no emotion" if  predicted == 0 else "emotion")
+        # from classificators import make_xgboost
+        #
+        # model = make_xgboost()
+        preds = []
+        for model in torch_model:
+            preds.append(model.predict(np.array(self.xarr).reshape(1, -1)))
+
+        preds = np.concatenate(preds).astype(int)
+        print(preds)
+        out_pred = np.bincount(preds).argmax()
+
+        # pre = torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32).to(device)
+        #
+        # out = torch_model(pre)
+        # _,predicted =torch.max((out), dim=1)
+        self.classification_label.setText("no emotion" if  out_pred == 0 else f"emotion {out_pred}")
 
 
     def programBeSavin(self,arg):

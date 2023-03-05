@@ -18,7 +18,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 # device = torch.device("cpu")
-file = "./data/data.csv"
+file = "data/new/my_data/data.csv"
 file_dir = "./data/new/dataset_1"
 
 NUM_CLASSES = 4
@@ -31,11 +31,12 @@ def L2_distance_matrix(A, B):
     dists = np.sum(A ** 2, axis=1).reshape(-1, 1) - 2*(A@B.T) + np.sum(B**2, axis=1)
     return dists
 
+
 def make_averaged_matrix():
     data = merge(file_dir)
 
     y = data[:, -1].astype(int)
-    data = data[:, :-1].reshape(len(data), 468, 3)
+    data = data[:, :-1]
 
     num_cls = max(y) + 1
 
@@ -44,10 +45,10 @@ def make_averaged_matrix():
     distMatricesZ = [[] for _ in range(num_cls)]
 
     for face_data, cls_value in zip(data, y):
-        face_data = face_data[:, np.newaxis]
-        distMatricesX[cls_value].append(L2_distance_matrix(face_data[0], face_data[0]))
-        distMatricesX[cls_value].append(L2_distance_matrix(face_data[1], face_data[1]))
-        distMatricesX[cls_value].append(L2_distance_matrix(face_data[2], face_data[2]))
+        face_data = face_data.reshape(data_shape)
+        distMatricesX[cls_value].append(L2_distance_matrix(face_data[:, 0, np.newaxis], face_data[:, 0, np.newaxis]))
+        distMatricesY[cls_value].append(L2_distance_matrix(face_data[:, 1, np.newaxis], face_data[:, 1, np.newaxis]))
+        distMatricesZ[cls_value].append(L2_distance_matrix(face_data[:, 2, np.newaxis], face_data[:, 2, np.newaxis]))
 
     averagedMatricesX = []
     averagedMatricesY = []
