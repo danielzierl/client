@@ -8,7 +8,7 @@ import torch
 
 
 def make_classifiers():
-    data_dir = "./data/new/my_data"
+    data_dir = "./data/new/final_data"
     # data_dir = "data/new/my_data/data1.csv"
 
     X_train, X_val, y_train, y_val = load_data(data_dir, 0.2, dir=True)

@@ -99,6 +99,7 @@ class FaceMeshWidget(QWidget):
         self.delay = 2
         self.pdf_lock_time = 0
         self.lock_flag = False
+        self.quited = False
 
     def update_frame(self):
         # Get video frame
@@ -178,9 +179,10 @@ class FaceMeshWidget(QWidget):
         for pred in preds:
             self.epic_queue.append(pred)
 
+        print(preds)
         out_pred = max(set(self.epic_queue), key=self.epic_queue.count)
 
-        print(out_pred)
+
         # out_pred = np.bincount(preds).argmax()
 
         # pre = torch.reshape(torch.from_numpy(np.array(self.xarr,dtype=float)), (1,-1)).to(torch.float32).to(device)
@@ -199,15 +201,17 @@ class FaceMeshWidget(QWidget):
             self.pdf_lock_time = time.time()
             self.lock_flag = True
 
-            if predicted == 1:
-                self.pdfReader.on_key_release(self.actions, 1)
-            if predicted == 3:
-                self.pdfReader.on_key_release(self.actions, 3)
-            if predicted == 10:
-                self.pdfReader.on_key_release(self.actions, 2)
-            if predicted == 2:
-                self.driver.quit()
-                pass
+            if not self.quited:
+                if predicted == 1:
+                    self.pdfReader.on_key_release(self.actions, 1)
+                if predicted == 2:
+                    self.pdfReader.on_key_release(self.actions, 2)
+                if predicted == 4:
+                    self.pdfReader.on_key_release(self.actions, 3)
+                if predicted == 3:
+                    self.quited = True
+                    self.driver.quit()
+                    pass
 
         # self.driver.quit()
 
