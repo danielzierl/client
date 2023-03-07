@@ -8,7 +8,7 @@ import torch.nn as nn
 import copy
 
 device = torch.device("cuda")
-data_file = "./data/data.csv"
+data_file = "data/new/my_data/data.csv"
 
 
 def load_data(file, train_rate=0.8):

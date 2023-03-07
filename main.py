@@ -3,12 +3,20 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QVBoxLay
 from PyQt5.QtGui import QPixmap
 from PyQt5 import QtCore, QtNetwork
 import cv2
+import collections
+
+from selenium import webdriver
+from selenium.webdriver import ActionChains
+from selenium.webdriver.chrome.service import Service
+
 import mediapipe as mp
 import numpy as np
+from selenium.webdriver.common.keys import Keys
 import pyqtgraph as pg
 import json
 from operator import add
 import os
+import pdfreader
 import csv
 import time
 import torch
@@ -45,8 +53,24 @@ class FaceMeshWidget(QWidget):
         self.video_widget.ui.roiBtn.hide()
         self.video_widget.ui.menuBtn.hide()
 
-        layout.addWidget(self.video_widget)
+        self.epic_queue = collections.deque(maxlen=6)
 
+        self.pdfReader = pdfreader.pdfReader
+        chromedriver_path = "./chromedriver.exe"
+        service = Service(chromedriver_path)
+
+        # Vytvoření instance třídy webdriver.Chrome s použitím objektu Service
+        self.driver = webdriver.Chrome(service=service)
+        # self.driver = webdriver.Chrome('C:/Users/jakub/Desktop/chromedriver.exe')
+        url = "file:///C:/Programming/Python Projects/client/book.pdf"
+        # Otevření PDF souboru v prohlížeči
+        self.driver.get(url)
+
+        self.actions = ActionChains(self.driver)
+
+        # Otevření PDF souboru v prohlížeči
+
+        layout.addWidget(self.video_widget)
 
         # Start video capture
         self.capture = cv2.VideoCapture(0)
@@ -54,15 +78,25 @@ class FaceMeshWidget(QWidget):
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(50)
 
-        #tmp data mean
+        # tmp data mean
         self.array = []
 
-        #mean data
+        # mean data
         self.mean_data = []
 
         # Setup face mesh detector
         self.mp_face_mesh = mp.solutions.face_mesh
         self.face_mesh = self.mp_face_mesh.FaceMesh()
+
+
+        from classificators import combine_models
+        self.model = combine_models()
+
+        # Time
+        self.delay = 2
+        self.pdf_lock_time = 0
+        self.lock_flag = False
+        self.quited = False
 
     def update_frame(self):
         # Get video frame
@@ -77,9 +111,9 @@ class FaceMeshWidget(QWidget):
         results = self.face_mesh.process(frame)
 
         # Get face landmarks
-        self.xarr=[]
-        self.yarr=[]
-        self.zarr=[]
+        self.xarr = []
+        self.yarr = []
+        self.zarr = []
 
         if results.multi_face_landmarks:
             for face_landmarks in results.multi_face_landmarks:
@@ -233,15 +267,15 @@ class CalibrationWindow(QWidget):
         self.facemesh_widget = FaceMeshWidget()
         # Setup buttons
         normal_button = QPushButton("Normal")
-        normal_button.clicked.connect(lambda: self.save_landmarks("normal",self.facemesh_widget))
+        normal_button.clicked.connect(lambda: self.save_landmarks("normal", self.facemesh_widget))
         layout.addWidget(normal_button)
 
         face_button = QPushButton("Face")
-        face_button.clicked.connect(lambda: self.save_landmarks("face",self.facemesh_widget))
+        face_button.clicked.connect(lambda: self.save_landmarks("face", self.facemesh_widget))
         layout.addWidget(face_button)
 
         # Setup facemesh widget
-        
+
         layout.addWidget(self.facemesh_widget)
         self.setLayout(layout)
 
@@ -275,7 +309,6 @@ class RunClassifiationWindow(QWidget):
 
 class ContinuousMeasuring(QWidget):
     def __init__(self):
-
         super().__init__()
         self.measuring = False
         self.emotion = 0
@@ -314,7 +347,7 @@ class ContinuousMeasuring(QWidget):
         
 
         layout.addWidget(self.facemesh_widget)
-        
+
         self.setLayout(layout)
     
     def setEm(self,num):
